@@ -30,17 +30,18 @@ VIPPS_SUBSCRIPTION_KEY_SECONDARY=vipps-subscription-key-secondary
 ### Initialize
 ```javascript
 const Vipps = require('@gait-as/vipps');
-const vipps = new Vipps({}) // This initializes the Vipps object with the environment variables
+const vipps = new Vipps() // This initializes the Vipps object with the environment variables
 
 // OR Create a new instance with your own config
-const vipps2 = new Vipps({
-	clientId: 'your vipps client id',
-	clientSecret: 'your vipps client secret',
-	authToken: 'your vipps auth token',
-	subscriptionKey: 'your vipps subscription key',
-})
+const vipps = new Vipps()
+vipps.config({
+    clientId: process.env.VIPPS_CLIENT_ID,
+    clientSecret: process.env.VIPPS_CLIENT_SECRET,
+    subscriptionKey: process.env.VIPPS_SUBSCRIPTION_KEY,
+    merchantSerialNumber: process.env.VIPPS_MERCHANT_SERIAL_NUMBER,
+});
 
-const token = await vipps.authenticate({}); // This will return a token for the Vipps API and set it in the Vipps object
+const token = await vipps.authenticate(); // This will return a token for the Vipps API and set it in the Vipps object
 const api = vipps.api; // This will return the Vipps API object
 
 api.get('/url')...
