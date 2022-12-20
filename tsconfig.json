@@ -1,15 +1,16 @@
 {
 	"$schema": "https://json.schemastore.org/tsconfig",
 	"display": "Node 18",
+	"clean": true,
 
 	"compilerOptions": {
 		"target": "es6",
 		"module": "commonjs",
 		"moduleResolution": "Node",
 		"declaration": true,
-
+		"allowJs": true,
 		"outDir": "./lib",
-		"strict": true,
+		"strict": true
 	},
 	"files": [
 		"src/index.ts"

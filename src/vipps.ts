@@ -1,6 +1,5 @@
 import axios from 'axios';
 import {
-	AuthenticateOptions,
 	VippsExpressOrderProps,
 	VippsConstructorOptions,
 	VippsEcommerceConstructorOptions,
@@ -13,26 +12,40 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 export class Vipps {
-	private readonly SUBSCRIPTION_KEY: string | undefined;
+	private VIPPS_API_URL = process.env.VIPPS_API_URL;
+	private VIPPS_CLIENT_ID: string | undefined;
+	private VIPPS_CLIENT_SECRET: string | undefined;
+	private VIPPS_SUBSCRIPTION_KEY: string | undefined;
+
 	private accessToken: string | undefined;
+	private accessTokenExpiresAt: number | undefined;
 	private merchantSerialNumber: string | undefined;
 
-	constructor({ subscriptionKey, authToken }: VippsConstructorOptions) {
-		this.SUBSCRIPTION_KEY = subscriptionKey || process.env.VIPPS_SUBSCRIPTION_KEY;
-		this.accessToken = authToken;
+	constructor() {
+		this.VIPPS_API_URL = process.env.VIPPS_API_URL;
+		this.VIPPS_CLIENT_ID = process.env.VIPPS_CLIENT_ID;
+		this.VIPPS_CLIENT_SECRET = process.env.VIPPS_CLIENT_SECRET;
+		this.VIPPS_SUBSCRIPTION_KEY = process.env.VIPPS_SUBSCRIPTION_KEY;
+
+		this.authenticate();
 	}
 
-	async authenticate({ clientId, clientSecret, subscriptionKey }: AuthenticateOptions) {
-		if (!clientId || !clientSecret || !subscriptionKey) {
-			try {
-				clientId = process.env.VIPPS_CLIENT_ID;
-				clientSecret = process.env.VIPPS_CLIENT_SECRET;
-				subscriptionKey = process.env.VIPPS_SUBSCRIPTION_KEY;
-			} catch (error) {
-				throw new Error(
-					'Missing credentials. Provide clientId, clientSecret and subscriptionKey, or set them as environment variables.'
-				);
-			}
+	config({ clientId, clientSecret, subscriptionKey, merchantSerialNumber }: VippsConstructorOptions) {
+		this.VIPPS_CLIENT_ID = clientId;
+		this.VIPPS_CLIENT_SECRET = clientSecret;
+		this.VIPPS_SUBSCRIPTION_KEY = subscriptionKey;
+		this.merchantSerialNumber = merchantSerialNumber;
+	}
+
+	async authenticate(props?: VippsConstructorOptions) {
+		if (props) {
+			this.config(props);
+		}
+
+		if (!this.VIPPS_CLIENT_ID || !this.VIPPS_CLIENT_SECRET || !this.VIPPS_SUBSCRIPTION_KEY) {
+			throw new Error(
+				'Missing credentials. Set credentials with config() or set VIPPS_CLIENT_ID, VIPPS_CLIENT_SECRET and VIPPS_SUBSCRIPTION_KEY as environment variables.'
+			);
 		}
 
 		return await axios
@@ -43,15 +56,19 @@ export class Vipps {
 					baseURL: process.env.VIPPS_API_URL,
 					headers: {
 						'Content-Type': 'application/json',
-						client_id: clientId,
-						client_secret: clientSecret,
-						'Ocp-Apim-Subscription-Key': subscriptionKey,
+						client_id: this.VIPPS_CLIENT_ID,
+						client_secret: this.VIPPS_CLIENT_SECRET,
+						'Ocp-Apim-Subscription-Key': this.VIPPS_SUBSCRIPTION_KEY,
 					},
 				}
 			)
 			.then((response) => {
 				this.accessToken = response.data.access_token;
-				return response.data.access_token;
+				this.accessTokenExpiresAt = response.data.expires_on;
+				return {
+					accessToken: this.accessToken,
+					accessTokenExpiresAt: this.accessTokenExpiresAt,
+				};
 			});
 	}
 
@@ -59,20 +76,52 @@ export class Vipps {
 		this.merchantSerialNumber = merchantSerialNumber;
 	}
 
+	setToken({ accessToken, accessTokenExpiresAt }: { accessToken?: string; accessTokenExpiresAt?: number }) {
+		this.accessToken = accessToken || this.accessToken;
+		this.accessTokenExpiresAt = accessTokenExpiresAt || this.accessTokenExpiresAt;
+	}
+
+	removeToken() {
+		this.accessToken = undefined;
+		this.accessTokenExpiresAt = undefined;
+	}
+
+	get authenticated() {
+		return !!this.accessToken;
+	}
+
 	get msn() {
 		return this.merchantSerialNumber;
 	}
 
 	get api() {
-		if (!this.accessToken) {
+		if (!this.accessToken || !this.accessTokenExpiresAt) {
 			throw new Error('No access token. Call getAccessToken first.');
+		}
+
+		if (Date.now() / 1000 > this.accessTokenExpiresAt) {
+			this.authenticate().then((res) => {
+				this.accessTokenExpiresAt = res.accessTokenExpiresAt;
+				this.accessToken = res.accessToken;
+
+				return axios.create({
+					baseURL: process.env.VIPPS_API_URL,
+					headers: {
+						'Content-Type': 'application/json',
+						'Ocp-Apim-Subscription-Key': this.VIPPS_SUBSCRIPTION_KEY,
+						Authorization: `Bearer ${res.accessToken}`,
+						'Merchant-Serial-Number': this.merchantSerialNumber,
+						'Vipps-System-Name': process.env.VIPPS_SYSTEM_NAME || 'gait-vipps',
+					},
+				});
+			});
 		}
 
 		return axios.create({
 			baseURL: process.env.VIPPS_API_URL,
 			headers: {
 				'Content-Type': 'application/json',
-				'Ocp-Apim-Subscription-Key': this.SUBSCRIPTION_KEY,
+				'Ocp-Apim-Subscription-Key': this.VIPPS_SUBSCRIPTION_KEY,
 				Authorization: `Bearer ${this.accessToken}`,
 				'Merchant-Serial-Number': this.merchantSerialNumber,
 				'Vipps-System-Name': process.env.VIPPS_SYSTEM_NAME || 'gait-vipps',
@@ -81,7 +130,10 @@ export class Vipps {
 	}
 
 	get token() {
-		return this.accessToken;
+		return {
+			accessToken: this.accessToken,
+			accessTokenExpiresAt: this.accessTokenExpiresAt,
+		};
 	}
 }
 
@@ -91,8 +143,8 @@ export class VippsEcommerce extends Vipps {
 	private fallBack: string | undefined;
 	private static instance: VippsEcommerce;
 
-	constructor(options: VippsConstructorOptions, merchantSerialNumber?: string) {
-		super(options);
+	constructor(merchantSerialNumber?: string) {
+		super();
 
 		if (merchantSerialNumber) {
 			this.setMsn(merchantSerialNumber);
@@ -101,13 +153,17 @@ export class VippsEcommerce extends Vipps {
 
 	public static getInstance = async (MSN?: string) => {
 		if (!VippsEcommerce.instance) {
-			VippsEcommerce.instance = new VippsEcommerce({});
+			VippsEcommerce.instance = new VippsEcommerce();
 
 			if (MSN) {
 				VippsEcommerce.instance.setMsn(MSN);
 			}
 
-			await VippsEcommerce.instance.authenticate({});
+			await VippsEcommerce.instance.authenticate();
+		}
+
+		if (MSN && MSN !== VippsEcommerce.instance.msn) {
+			VippsEcommerce.instance.setMsn(MSN);
 		}
 
 		return VippsEcommerce.instance;

@@ -95,40 +95,40 @@ const orderData: VippsExpressOrderProps = {
 }
 
 const testOrder = async () => {
-	/**
-	 * Initialize Vipps instance and automatically authenticate
-	 * This will use the credentials from the environment variables,
-	 * or the ones provided in the constructor
- 	 */
-	const vipps = await VippsEcommerce.getInstance()
-
-
-	/**
-	 * Set vipps options required for the order
-	 * This will NOT default to environment variables
-	 */
-	vipps.setOptions({
-		callbackPrefix: 'https://gait-as-packages.herokuapp.com/api/vipps',
-		consentRemovalPrefix: 'https://gait-as-packages.herokuapp.com/api/vipps',
-		fallback: 'https://gait.no',
-		merchantSerialNumber: '229350',
-	})
-
-
-	/**
-	 * Create the order and get the response
-	 * This will return a promise
-	 * The response will contain the url to redirect the user to, and the order id
-	 */
-	const order: VippsExpressOrderResponse = await vipps.expressOrder(orderData)
-		.then((response ) => {
-			return response;
-		})
-		.catch((error) => {
-			return error;
-		})
-
-	console.log(order);
+    /**
+     * Initialize Vipps instance and automatically authenticate
+     * This will use the credentials from the environment variables,
+     * or the ones provided in the constructor
+     */
+    const vipps = await VippsEcommerce.getInstance()
+    
+    
+    /**
+     * Set vipps options required for the order
+     * This will NOT default to environment variables
+     */
+    vipps.setOptions({
+        callbackPrefix: 'https://gait-as-packages.herokuapp.com/api/vipps',
+        consentRemovalPrefix: 'https://gait-as-packages.herokuapp.com/api/vipps',
+        fallback: 'https://gait.no',
+        merchantSerialNumber: '229350',
+    })
+    
+    
+    /**
+     * Create the order and get the response
+     * This will return a promise
+     * The response will contain the url to redirect the user to, and the order id
+     */
+    const order: VippsExpressOrderResponse = await vipps.expressOrder(orderData)
+        .then((response ) => {
+            return response;
+        })
+        .catch((error) => {
+            return error;
+        })
+    
+    console.log(order);
 }
 ```
 

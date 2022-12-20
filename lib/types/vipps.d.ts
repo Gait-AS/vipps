@@ -2,7 +2,7 @@ export interface VippsConstructorOptions {
     clientId?: string;
     clientSecret?: string;
     subscriptionKey?: string;
-    authToken?: string;
+    merchantSerialNumber?: string;
 }
 export interface VippsEcommerceConstructorOptions {
     callbackPrefix: string;
