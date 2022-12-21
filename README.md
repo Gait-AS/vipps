@@ -1,5 +1,5 @@
 <img width='300' src="assets/vipps_logo_rgb.png" alt='vipps orange logo'>
-<img width='100' src="assets/favicon2.png" alt='vipps orange logo'>
+<img width='100' src="assets/favicon2.png" alt='Gait AS blue logo'>
 
 # Vipps node library
 Non-official Vipps eCommerce NPM package to manage Vipps eCom API.
@@ -181,4 +181,11 @@ const testOrderStatus = async (orderId: string) => {
 
 testOrderStatus('1671541910915')
 ```
+<br>
+
+
+# Vipps Payment Flow
+The vipps payment should follow this flowchart
+
+<img alt='Vipps checkout flow' src="assets/flow-diagram-01b575f6d0baa84a84eb83c4b75bf33c.png">
 
